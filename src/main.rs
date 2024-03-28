@@ -1,3 +1,5 @@
+pub mod components;
+
 use glium::{backend::glutin::SimpleWindowBuilder, Surface};
 use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder};
 
@@ -17,7 +19,7 @@ fn main() {
         }
 
         let mut target = display.draw();
-        target.clear_color(0.0, 0.1, 0.4, 1.0);
+        target.clear_color(0.0, 0.0, 0.0, 1.0);
         target.finish().unwrap();
     });
 }
