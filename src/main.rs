@@ -1,13 +1,28 @@
 pub mod components;
+pub mod render;
 
-use glium::{backend::glutin::SimpleWindowBuilder, Surface};
+use brood::{entity, World};
+use glam::Mat4;
+use glium::backend::glutin::SimpleWindowBuilder;
 use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder};
+
+use render::renderer::Renderer;
+use components::{mesh::RenderComponent, transform::TransformComponent, Registry};
 
 fn main() {
     let event_loop = EventLoopBuilder::new().build().expect("Event loop didn't build");
     let (_window, display) = SimpleWindowBuilder::new()
         .with_title("ogl")
         .build(&event_loop);
+
+    let mut renderer = Renderer::new(display);
+
+    let mut world = World::<Registry>::new();
+
+    world.insert(entity!(
+        TransformComponent::new(),
+        RenderComponent::new(render::MeshType::Internal(render::InternalMesh::Triangle))
+    ));
 
     let _ = event_loop.run(move |event, window_target| {
         match event {
@@ -18,8 +33,6 @@ fn main() {
             _ => (),
         }
 
-        let mut target = display.draw();
-        target.clear_color(0.0, 0.0, 0.0, 1.0);
-        target.finish().unwrap();
+        world.run_system(&mut renderer);
     });
 }
