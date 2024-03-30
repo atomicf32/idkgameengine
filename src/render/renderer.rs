@@ -1,5 +1,5 @@
 use brood::{query::filter, registry, result, system::System, Views};
-use glam::{Mat4, Vec3};
+use glam::Mat4;
 use glium::{glutin::surface::WindowSurface, implement_vertex, uniform, Display, Program, Surface};
 
 use crate::components::{mesh::RenderComponent, transform::TransformComponent};
@@ -23,6 +23,7 @@ pub struct Renderer {
 	display: Display<WindowSurface>,
 	triangle: Mesh,
 	square: Mesh,
+	cube: Mesh,
 	default_program: Program,
 	proj_mat: Mat4,
 	view_mat: Mat4,
@@ -32,6 +33,7 @@ impl Renderer {
 	pub fn new(display: Display<WindowSurface>) -> Self {
 		let triangle = Self::gen_triangle(&display);
 		let square = Self::gen_square(&display);
+		let cube = Self::gen_cube(&display);
 		let default_program = Self::gen_default_program(&display);
 		let aspect_ratio = display.get_framebuffer_dimensions().0 as f32 / display.get_framebuffer_dimensions().1 as f32;
 		let proj_mat = Mat4::perspective_lh(0.78, aspect_ratio, 0.0, 100.0);
@@ -41,6 +43,7 @@ impl Renderer {
 			display,
 			triangle,
 			square,
+			cube,
 			default_program,
 			proj_mat,
 			view_mat,
@@ -79,6 +82,52 @@ impl Renderer {
 		}
 	}
 
+	fn gen_cube(display: &Display<WindowSurface>) -> Mesh {
+		let cube_verts = vec![
+			Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new(-0.5,  0.5, -0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5, -0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5,  0.5, -0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5, -0.5)
+		];
+
+		Mesh {
+			vertex_buffer: glium::VertexBuffer::new(display, &cube_verts).unwrap().into(),
+    		indices: None,
+		}
+	}
+
 	fn gen_default_program(display: &Display<WindowSurface>) -> Program {
 		Program::from_source(display, include_str!("../shaders/vertex.glsl"), include_str!("../shaders/fragment.glsl"), None).unwrap()
 	}
@@ -106,6 +155,7 @@ impl System for Renderer {
 					let mesh = match i {
 						super::InternalMesh::Triangle => &self.triangle,
 						super::InternalMesh::Square => &self.square,
+						super::InternalMesh::Cube => &self.cube,
 					};
 
 					match &mesh.indices {

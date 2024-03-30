@@ -16,4 +16,5 @@ pub struct ExternalMesh {
 pub enum InternalMesh {
 	Triangle,
 	Square,
+	Cube,
 }

@@ -2,7 +2,6 @@ pub mod components;
 pub mod render;
 
 use brood::{entity, World};
-use glam::Mat4;
 use glium::backend::glutin::SimpleWindowBuilder;
 use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder};
 
@@ -20,8 +19,8 @@ fn main() {
     let mut world = World::<Registry>::new();
 
     world.insert(entity!(
-        TransformComponent::new(),
-        RenderComponent::new(render::MeshType::Internal(render::InternalMesh::Triangle))
+        TransformComponent::from_position(0.0, 0.0, 5.0),
+        RenderComponent::new(render::MeshType::Internal(render::InternalMesh::Cube))
     ));
 
     let _ = event_loop.run(move |event, window_target| {

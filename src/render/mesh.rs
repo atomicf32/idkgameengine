@@ -1,4 +1,3 @@
-use glam::Mat4;
 use glium::{index::IndexBufferAny, vertex::VertexBufferAny};
 
 pub struct Mesh {
