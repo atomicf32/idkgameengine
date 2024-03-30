@@ -36,7 +36,7 @@ impl Renderer {
 		let cube = Self::gen_cube(&display);
 		let default_program = Self::gen_default_program(&display);
 		let aspect_ratio = display.get_framebuffer_dimensions().0 as f32 / display.get_framebuffer_dimensions().1 as f32;
-		let proj_mat = Mat4::perspective_lh(0.78, aspect_ratio, 0.0, 100.0);
+		let proj_mat = Mat4::perspective_lh(45_f32.to_radians(), aspect_ratio, 0.0, 100.0);
 		let view_mat = Mat4::IDENTITY;
 
 		Self {
