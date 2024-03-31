@@ -1,8 +1,8 @@
 use brood::Registry;
 
-use self::{mesh::RenderComponent, transform::TransformComponent};
+use self::{render::RenderComponent, transform::TransformComponent};
 
-pub mod mesh;
+pub mod render;
 pub mod transform;
 
 pub(crate) type Registry = Registry!(RenderComponent, TransformComponent);
