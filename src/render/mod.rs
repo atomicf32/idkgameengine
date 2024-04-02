@@ -3,6 +3,7 @@ use glium::implement_vertex;
 pub mod mesh;
 pub mod renderer;
 pub mod mesh_manager;
+pub mod shader_manager;
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -16,6 +17,3 @@ impl Vertex {
 	}
 }
 
-pub const TRIANGLE_ID: &str = "internal::triangle";
-pub const SQUARE_ID: &str = "internal::square";
-pub const CUBE_ID: &str = "internal::cube";

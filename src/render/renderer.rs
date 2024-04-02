@@ -1,38 +1,26 @@
 use std::rc::Rc;
 
 use brood::{query::filter, registry, result, system::System, Views};
-use glam::Mat4;
 use glium::{glutin::surface::WindowSurface, uniform, Display, DrawParameters, Program, Surface};
 
-use crate::{components::{render::RenderComponent, transform::TransformComponent}, mesh::Mesh};
+use crate::{components::{render::RenderComponent, transform::TransformComponent}, mesh::Mesh, resources::camera::CameraResource, shader_manager::{ShaderDescriptor, ShaderManager}};
 
 use super::mesh_manager::MeshManager;
 
 pub struct Renderer {
-	display: Display<WindowSurface>,
-	// Default meshes
-	default_program: Program,
-	// Matrices
-	proj_mat: Mat4,
-	view_mat: Mat4,
 	// Mesh Manager
 	mesh_manager: MeshManager,
+	shader_manager: ShaderManager,
+	// Display
+	display: Display<WindowSurface>,
 }
 
 impl Renderer {
 	pub fn new(display: Display<WindowSurface>) -> Self {
-		let default_program = Self::gen_default_program(&display);
-		let aspect_ratio = display.get_framebuffer_dimensions().0 as f32 / display.get_framebuffer_dimensions().1 as f32;
-		let proj_mat = Mat4::perspective_lh(45_f32.to_radians(), aspect_ratio, 0.0, 100.0);
-		let view_mat = Mat4::IDENTITY;
-		let mesh_manager = MeshManager::new(&display);
-
 		Self {
+			mesh_manager: MeshManager::new(&display),
+			shader_manager: ShaderManager::new(&display),
 			display,
-			default_program,
-			proj_mat,
-			view_mat,
-			mesh_manager,
 		}
 	}
 
@@ -40,15 +28,15 @@ impl Renderer {
 		self.mesh_manager.get_mesh(name)
 	}
 
-	fn gen_default_program(display: &Display<WindowSurface>) -> Program {
-		Program::from_source(display, include_str!("../shaders/vertex.glsl"), include_str!("../shaders/fragment.glsl"), None).unwrap()
+	pub fn get_shader(&mut self, descriptor: &ShaderDescriptor) -> Rc<Program> {
+		self.shader_manager.get_shader(descriptor)
 	}
 }
 
 impl System for Renderer {
 	type Filter = filter::None;
 	type Views<'a> = Views!(&'a TransformComponent, &'a RenderComponent);
-	type ResourceViews<'a> = Views!();
+	type ResourceViews<'a> = Views!(&'a CameraResource);
 	type EntryViews<'a> = Views!();
 
 	fn run<'a, R, S, I, E>(
@@ -68,17 +56,15 @@ impl System for Renderer {
         target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
 
 		for result!(transform, render) in query_result.iter {
-			let mesh = &render.0;
-
-			match &mesh.indices {
+			match &render.mesh.indices {
 				Some(i) => {
 					target.draw(
-						&mesh.vertex_buffer,
+						&render.mesh.vertex_buffer,
 						i,
-						&self.default_program,
+						&render.shader.as_ref(),
 						&uniform! {
-							proj: self.proj_mat.to_cols_array_2d(),
-							view: self.view_mat.to_cols_array_2d(),
+							proj: query_result.resources.0.projection.to_cols_array_2d(),
+							view: query_result.resources.0.view.to_cols_array_2d(),
 							model: transform.0.to_cols_array_2d()
 						},
 						&draw_parameters
@@ -86,12 +72,12 @@ impl System for Renderer {
 				},
 				None => {
 					target.draw(
-						&mesh.vertex_buffer,
+						&render.mesh.vertex_buffer,
 						glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
-						&self.default_program,
+						&render.shader.as_ref(),
 						&uniform! {
-							proj: self.proj_mat.to_cols_array_2d(),
-							view: self.view_mat.to_cols_array_2d(),
+							proj: query_result.resources.0.projection.to_cols_array_2d(),
+							view: query_result.resources.0.view.to_cols_array_2d(),
 							model: transform.0.to_cols_array_2d(),
 						},
 						&draw_parameters

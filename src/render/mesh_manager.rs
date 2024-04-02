@@ -2,7 +2,11 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use glium::{glutin::surface::WindowSurface, Display};
 
-use super::{mesh::Mesh, Vertex, CUBE_ID, SQUARE_ID, TRIANGLE_ID};
+use super::{mesh::Mesh, Vertex};
+
+pub const TRIANGLE_ID: &str = "internal::triangle";
+pub const SQUARE_ID: &str = "internal::square";
+pub const CUBE_ID: &str = "internal::cube";
 
 pub struct MeshManager {
 	mesh_map: BTreeMap<&'static str, Rc<Mesh>>,
