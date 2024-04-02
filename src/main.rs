@@ -24,7 +24,7 @@ fn main() {
     let mut renderer = Renderer::new(display);
 
     let mut world = World::<Registry, _>::with_resources(resources!(
-        CameraResource::new(45_f32.to_radians(), window.inner_size().width as f32 / window.inner_size().height as f32),
+        CameraResource::new(60_f32.to_radians(), window.inner_size().width as f32 / window.inner_size().height as f32),
         TimerResource::new(Duration::from_secs_f32(1 as f32 / 10 as f32)),
     ));
 

@@ -56,6 +56,8 @@ impl System for Renderer {
         target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
 
 		for result!(transform, render) in query_result.iter {
+			let mat = query_result.resources.0.projection * query_result.resources.0.view * transform.0;
+
 			match &render.mesh.indices {
 				Some(i) => {
 					target.draw(
@@ -63,9 +65,7 @@ impl System for Renderer {
 						i,
 						&render.shader.as_ref(),
 						&uniform! {
-							proj: query_result.resources.0.projection.to_cols_array_2d(),
-							view: query_result.resources.0.view.to_cols_array_2d(),
-							model: transform.0.to_cols_array_2d()
+							matrix: mat.to_cols_array_2d()
 						},
 						&draw_parameters
 					).unwrap();
@@ -76,9 +76,7 @@ impl System for Renderer {
 						glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
 						&render.shader.as_ref(),
 						&uniform! {
-							proj: query_result.resources.0.projection.to_cols_array_2d(),
-							view: query_result.resources.0.view.to_cols_array_2d(),
-							model: transform.0.to_cols_array_2d(),
+							matrix: mat.to_cols_array_2d()
 						},
 						&draw_parameters
 					).unwrap();

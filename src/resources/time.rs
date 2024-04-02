@@ -14,7 +14,7 @@ impl TimerResource {
 
 	pub fn tick(&mut self) {
 		let current = Instant::now();
-		self.dt = current - self.previous;
+		self.dt = std::cmp::min(current - self.previous, self.max_duration);
 		self.previous = current;
 	}
 
@@ -23,6 +23,6 @@ impl TimerResource {
 	}
 
 	pub fn get_dt(&self) -> f32 {
-		std::cmp::min(self.dt, self.max_duration).as_secs_f32()
+		dbg!(self.dt.as_secs_f32())
 	}
 }

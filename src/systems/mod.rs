@@ -1,4 +1,5 @@
 use brood::{query::filter, system::System, Views};
+use glam::Mat4;
 
 use crate::{resources::time::TimerResource, CameraResource};
 
@@ -18,6 +19,6 @@ impl System for MoveCamera {
 		I: Iterator<Item = Self::Views<'a>>
 	{
 		let (camera, (timer, _)) = query_result.resources;
-		
+		camera.view *= Mat4::from_rotation_y(360_f32.to_radians() * timer.get_dt());
 	}
 }
