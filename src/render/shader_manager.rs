@@ -1,8 +1,8 @@
-use std::{collections::BTreeMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use glium::{glutin::surface::WindowSurface, Display, Program};
 
-#[derive(PartialEq, PartialOrd, Eq, Ord)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct ShaderDescriptor {
 	vertex: &'static str,
 	fragment: &'static str,
@@ -16,12 +16,12 @@ pub const DEFAULT_SHADERS: ShaderDescriptor = ShaderDescriptor {
 };
 
 pub struct ShaderManager {
-	program_map: BTreeMap<ShaderDescriptor, Rc<Program>>
+	program_map: HashMap<ShaderDescriptor, Rc<Program>>
 }
 
 impl ShaderManager {
 	pub fn new(display: &Display<WindowSurface>) -> Self {
-		let mut new = Self { program_map: BTreeMap::new() };
+		let mut new = Self { program_map: HashMap::new() };
 
 		new.program_map.insert(DEFAULT_SHADERS, Rc::new(Self::gen_default_program(display)));
 

@@ -8,7 +8,7 @@ use std::time::Duration;
 use brood::{entity, resources, schedule, system::schedule::task, World};
 use glam::{Mat4, Quat, Vec3};
 use glium::backend::glutin::SimpleWindowBuilder;
-use resources::{camera::CameraResource, time::TimerResource};
+use resources::{camera::CameraResource, input::InputResource, time::TimerResource};
 use systems::MoveCamera;
 use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder};
 
@@ -26,6 +26,7 @@ fn main() {
     let mut world = World::<Registry, _>::with_resources(resources!(
         CameraResource::new(60_f32.to_radians(), window.inner_size().width as f32 / window.inner_size().height as f32),
         TimerResource::new(Duration::from_secs_f32(1 as f32 / 10 as f32)),
+        InputResource::new(&window),
     ));
 
     world.insert(entity!(
@@ -38,13 +39,17 @@ fn main() {
     let _ = event_loop.run(move |event, window_target| {
         window_target.set_control_flow(winit::event_loop::ControlFlow::Poll);
         match event {
-            Event::DeviceEvent { device_id, event } => {
-
+            Event::DeviceEvent { event, .. } => {
+                world.get_mut::<InputResource, _>().device_event(&event);
             }
-            Event::WindowEvent { event, .. } => match event {
-                WindowEvent::CloseRequested => window_target.exit(),
-                WindowEvent::Resized(size) => world.get_mut::<CameraResource, _>().resize(size.width as f32 / size.height as f32),
-                _ => (),
+            Event::WindowEvent { event, .. } => {
+                world.get_mut::<InputResource, _>().window_event(&event);
+
+                match event {
+                    WindowEvent::CloseRequested => window_target.exit(),
+                    WindowEvent::Resized(size) => world.get_mut::<CameraResource, _>().resize(size.width as f32 / size.height as f32),
+                    _ => (),
+                }
             }
             Event::AboutToWait => {
                 world.get_mut::<TimerResource, _>().tick();

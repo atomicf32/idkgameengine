@@ -46,14 +46,14 @@ impl System for Renderer {
 		R: registry::Registry,
 		I: Iterator<Item = Self::Views<'a>> 
 	{
-		// TODO: Fix the depth buffer
-		let draw_parameters = DrawParameters {
-			depth: glium::Depth { test: glium::draw_parameters::DepthTest::IfMoreOrEqual, write: true, ..Default::default() },
-			..Default::default()
-		};
-
 		let mut target = self.display.draw();
         target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
+
+		// TODO: Fix the depth buffer
+		let draw_parameters = DrawParameters {
+			depth: glium::Depth { test: glium::draw_parameters::DepthTest::IfLess, write: true, ..Default::default() },
+			..Default::default()
+		};
 
 		for result!(transform, render) in query_result.iter {
 			let mat = query_result.resources.0.projection * query_result.resources.0.view * transform.0;

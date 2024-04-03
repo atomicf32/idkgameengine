@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 use glium::{glutin::surface::WindowSurface, Display};
 
@@ -9,13 +9,13 @@ pub const SQUARE_ID: &str = "internal::square";
 pub const CUBE_ID: &str = "internal::cube";
 
 pub struct MeshManager {
-	mesh_map: BTreeMap<&'static str, Rc<Mesh>>,
+	mesh_map: HashMap<&'static str, Rc<Mesh>>,
 }
 
 impl MeshManager {
 	pub fn new(display: &Display<WindowSurface>) -> Self {
 		let mut new = Self {
-			mesh_map: BTreeMap::new()
+			mesh_map: HashMap::new()
 		};
 
 		new.mesh_map.insert(TRIANGLE_ID, Rc::new(Self::gen_triangle(display)));

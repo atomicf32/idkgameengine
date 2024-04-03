@@ -23,6 +23,6 @@ impl TimerResource {
 	}
 
 	pub fn get_dt(&self) -> f32 {
-		dbg!(self.dt.as_secs_f32())
+		self.dt.as_secs_f32()
 	}
 }
