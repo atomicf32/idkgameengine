@@ -10,7 +10,7 @@ use glam::{Mat4, Quat, Vec3};
 use glium::backend::glutin::SimpleWindowBuilder;
 use resources::{camera::CameraResource, input::InputResource, time::TimerResource};
 use systems::{camera_system::CameraSystem, spin_system::SpinCube};
-use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder, window::{CursorGrabMode, WindowBuilder}};
+use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder, window::WindowBuilder};
 
 use render::{mesh_manager::*, renderer::Renderer, shader_manager::*, *};
 use components::{render::RenderComponent, transform::TransformComponent, Registry};

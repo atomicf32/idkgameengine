@@ -49,7 +49,6 @@ impl System for Renderer {
 		let mut target = self.display.draw();
         target.clear_color_and_depth((0.0, 0.0, 0.0, 1.0), 1.0);
 
-		// TODO: Fix the depth buffer
 		let draw_parameters = DrawParameters {
 			depth: glium::Depth { test: glium::draw_parameters::DepthTest::IfLess, write: true, ..Default::default() },
 			..Default::default()
