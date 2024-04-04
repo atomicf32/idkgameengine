@@ -10,12 +10,12 @@ use brood::{entity, resources, schedule, system::schedule::task, World};
 use glam::{Mat4, Quat, Vec3};
 use glium::backend::glutin::SimpleWindowBuilder;
 use resource_manager::ResourceManager;
-use resources::{camera::CameraResource, input::InputResource, time::TimerResource};
-use systems::{camera_system::CameraSystem, spin_system::SpinCube};
+use resources::{camera::CameraResource, input::InputResource, time::TimerResource, ExitResource};
+use systems::{camera_system::CameraSystem, close_system::CloseSystem, spin_system::SpinCube};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::EventLoopBuilder,
-    window::WindowBuilder,
+    window::{CursorGrabMode, WindowBuilder},
 };
 
 use components::{draw::DrawComponent, transform::TransformComponent, Registry};
@@ -31,6 +31,12 @@ fn main() {
         .set_window_builder(window_builder)
         .build(&event_loop);
 
+    window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+    window.set_cursor_visible(false);
+    window.set_cursor_grab(CursorGrabMode::Confined)
+            .or_else(|_e| window.set_cursor_grab(CursorGrabMode::Locked))
+            .unwrap();
+
     let mut renderer = Renderer::new(&display);
     let mut manager = ResourceManager::new(&display);
 
@@ -41,7 +47,7 @@ fn main() {
         ),
         TimerResource::new(Duration::from_secs_f32(1 as f32 / 10 as f32)),
         InputResource::new(&window),
-        window,
+        ExitResource(false),
     ));
 
     world.insert(entity!(
@@ -57,7 +63,11 @@ fn main() {
         DrawComponent::load(&mut manager, &Default::default())
     ));
 
-    let mut schedule = schedule!(task::System(SpinCube), task::System(CameraSystem));
+    let mut schedule = schedule!(
+        task::System(SpinCube),
+        task::System(CameraSystem),
+        task::System(CloseSystem),
+    );
 
     let _ = event_loop.run(move |event, window_target| {
         window_target.set_control_flow(winit::event_loop::ControlFlow::Poll);
@@ -81,6 +91,9 @@ fn main() {
                 world.run_system(&mut renderer);
                 world.get_mut::<TimerResource, _>().tick();
                 world.get_mut::<InputResource, _>().tick();
+                if world.get::<ExitResource, _>().0 {
+                    window_target.exit();
+                }
             }
             _ => (),
         }
