@@ -1,8 +1,8 @@
 use brood::Registry;
 
-use self::{render::RenderComponent, transform::TransformComponent};
+use self::{draw::DrawComponent, transform::TransformComponent};
 
-pub mod render;
+pub mod draw;
 pub mod transform;
 
-pub type Registry = Registry!(RenderComponent, TransformComponent);
+pub type Registry = Registry!(DrawComponent, TransformComponent);

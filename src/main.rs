@@ -2,18 +2,20 @@ pub mod components;
 pub mod render;
 pub mod systems;
 pub mod resources;
+pub mod resource_manager;
 
 use std::time::Duration;
 
 use brood::{entity, resources, schedule, system::schedule::task, World};
 use glam::{Mat4, Quat, Vec3};
 use glium::backend::glutin::SimpleWindowBuilder;
+use resource_manager::ResourceManager;
 use resources::{camera::CameraResource, input::InputResource, time::TimerResource};
 use systems::{camera_system::CameraSystem, spin_system::SpinCube};
 use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder, window::WindowBuilder};
 
-use render::{mesh_manager::*, renderer::Renderer, shader_manager::*, *};
-use components::{render::RenderComponent, transform::TransformComponent, Registry};
+use render::{renderer::Renderer, *};
+use components::{draw::DrawComponent, transform::TransformComponent, Registry};
 
 fn main() {
     let event_loop = EventLoopBuilder::new().build().expect("Event loop didn't build");
@@ -23,7 +25,8 @@ fn main() {
         .set_window_builder(window_builder)
         .build(&event_loop);
 
-    let mut renderer = Renderer::new(display);
+    let mut renderer = Renderer::new(&display);
+    let mut manager = ResourceManager::new(&display, &renderer);
 
     let mut world = World::<Registry, _>::with_resources(resources!(
         CameraResource::new(60_f32.to_radians(), window.inner_size().width as f32 / window.inner_size().height as f32),
@@ -34,7 +37,7 @@ fn main() {
 
     world.insert(entity!(
         TransformComponent::from_mat4(Mat4::from_rotation_translation(Quat::from_euler(glam::EulerRot::XYZ, 40_f32.to_radians(), 0.0, 40_f32.to_radians()), Vec3::new(0.0, 0.0, 5.0))),
-        RenderComponent::from_renderer(&mut renderer, CUBE_ID, &DEFAULT_SHADERS)
+        DrawComponent::load(&mut manager, &Default::default())
     ));
 
     let mut schedule = schedule!(task::System(SpinCube), task::System(CameraSystem));

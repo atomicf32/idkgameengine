@@ -1,41 +1,106 @@
-use std::rc::Rc;
-
 use brood::{query::filter, registry, result, system::System, Views};
 use glium::{glutin::surface::WindowSurface, uniform, Display, DrawParameters, Program, Surface};
 
-use crate::{components::{render::RenderComponent, transform::TransformComponent}, mesh::Mesh, resources::camera::CameraResource, shader_manager::{ShaderDescriptor, ShaderManager}};
+use crate::{components::{draw::DrawComponent, transform::TransformComponent}, mesh::Mesh, resources::camera::CameraResource, Vertex};
 
-use super::mesh_manager::MeshManager;
-
-pub struct Renderer {
-	// Mesh Manager
-	mesh_manager: MeshManager,
-	shader_manager: ShaderManager,
+pub struct Renderer<'a> {
 	// Display
-	display: Display<WindowSurface>,
+	display: &'a Display<WindowSurface>,
 }
 
-impl Renderer {
-	pub fn new(display: Display<WindowSurface>) -> Self {
+impl<'a> Renderer<'a> {
+	pub fn new(display: &'a Display<WindowSurface>) -> Self {
 		Self {
-			mesh_manager: MeshManager::new(&display),
-			shader_manager: ShaderManager::new(&display),
 			display,
 		}
 	}
 
-	pub fn get_mesh(&mut self, name: &str) -> Rc<Mesh> {
-		self.mesh_manager.get_mesh(name)
+	pub fn gen_internal_program(&self) -> Program {
+		Program::from_source(self.display, include_str!("../shaders/internal/vertex.glsl"), include_str!("../shaders/internal/fragment.glsl"), None).unwrap()
 	}
 
-	pub fn get_shader(&mut self, descriptor: &ShaderDescriptor) -> Rc<Program> {
-		self.shader_manager.get_shader(descriptor)
+	pub fn gen_triangle(&self) -> Mesh {
+		let triangle_verts = vec![
+			Vertex::new(-0.5, -0.5, 0.5),
+			Vertex::new( 0.5, -0.5, 0.5),
+			Vertex::new( 0.0,  0.5, 0.5),
+		];
+
+		Mesh {
+			vertex_buffer: glium::VertexBuffer::new(self.display, &triangle_verts).unwrap().into(),
+    		indices: None,
+		}
+	}
+
+	pub fn gen_square(&self) -> Mesh {
+		let square_verts = vec![
+			Vertex::new( 0.5,  0.5, 0.0),
+			Vertex::new( 0.5, -0.5, 0.0),
+			Vertex::new(-0.5, -0.5, 0.0),
+			Vertex::new(-0.5,  0.5, 0.0),
+		];
+
+		let square_indices: Vec<u32> = vec![
+			0, 1, 3,
+        	1, 2, 3
+		];
+
+		Mesh {
+			vertex_buffer: glium::VertexBuffer::new(self.display, &square_verts).unwrap().into(),
+			indices: Some(glium::IndexBuffer::new(self.display, glium::index::PrimitiveType::TrianglesList, &square_indices).unwrap().into()),
+		}
+	}
+
+	pub fn gen_cube(&self) -> Mesh {
+		let cube_verts = vec![
+			Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new(-0.5,  0.5, -0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5, -0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5, -0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new( 0.5, -0.5,  0.5),
+        	Vertex::new(-0.5, -0.5,  0.5),
+        	Vertex::new(-0.5, -0.5, -0.5),
+        	Vertex::new(-0.5,  0.5, -0.5),
+        	Vertex::new( 0.5,  0.5, -0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new( 0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5,  0.5),
+        	Vertex::new(-0.5,  0.5, -0.5)
+		];
+
+		Mesh {
+			vertex_buffer: glium::VertexBuffer::new(self.display, &cube_verts).unwrap().into(),
+    		indices: None,
+		}
 	}
 }
 
-impl System for Renderer {
+impl System for Renderer<'_> {
 	type Filter = filter::None;
-	type Views<'a> = Views!(&'a TransformComponent, &'a RenderComponent);
+	type Views<'a> = Views!(&'a TransformComponent, &'a DrawComponent);
 	type ResourceViews<'a> = Views!(&'a CameraResource);
 	type EntryViews<'a> = Views!();
 

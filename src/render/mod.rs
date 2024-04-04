@@ -1,9 +1,9 @@
+use std::path::Path;
+
 use glium::implement_vertex;
 
 pub mod mesh;
 pub mod renderer;
-pub mod mesh_manager;
-pub mod shader_manager;
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -17,3 +17,9 @@ impl Vertex {
 	}
 }
 
+#[derive(PartialEq, PartialOrd, Eq, Ord, Hash)]
+pub struct ShaderDescriptor {
+	vertex: &'static Path,
+	fragment: &'static Path,
+	geometry: Option<&'static Path>,
+}
