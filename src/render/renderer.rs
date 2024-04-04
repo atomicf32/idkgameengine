@@ -55,9 +55,9 @@ impl System for Renderer {
 			..Default::default()
 		};
 
-		for result!(transform, render) in query_result.iter {
-			let mat = query_result.resources.0.projection * query_result.resources.0.view * transform.0;
+		let result!(camera) = query_result.resources;
 
+		for result!(transform, render) in query_result.iter {
 			match &render.mesh.indices {
 				Some(i) => {
 					target.draw(
@@ -65,7 +65,7 @@ impl System for Renderer {
 						i,
 						&render.shader.as_ref(),
 						&uniform! {
-							matrix: mat.to_cols_array_2d()
+							matrix: camera.transform(transform.inner())
 						},
 						&draw_parameters
 					).unwrap();
@@ -76,7 +76,7 @@ impl System for Renderer {
 						glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
 						&render.shader.as_ref(),
 						&uniform! {
-							matrix: mat.to_cols_array_2d()
+							matrix: camera.transform(transform.inner())
 						},
 						&draw_parameters
 					).unwrap();
