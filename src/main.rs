@@ -1,8 +1,8 @@
 pub mod components;
 pub mod render;
-pub mod systems;
-pub mod resources;
 pub mod resource_manager;
+pub mod resources;
+pub mod systems;
 
 use std::time::Duration;
 
@@ -12,13 +12,19 @@ use glium::backend::glutin::SimpleWindowBuilder;
 use resource_manager::ResourceManager;
 use resources::{camera::CameraResource, input::InputResource, time::TimerResource};
 use systems::{camera_system::CameraSystem, spin_system::SpinCube};
-use winit::{event::{Event, WindowEvent}, event_loop::EventLoopBuilder, window::WindowBuilder};
+use winit::{
+    event::{Event, WindowEvent},
+    event_loop::EventLoopBuilder,
+    window::WindowBuilder,
+};
 
-use render::{renderer::Renderer, *};
 use components::{draw::DrawComponent, transform::TransformComponent, Registry};
+use render::{renderer::Renderer, *};
 
 fn main() {
-    let event_loop = EventLoopBuilder::new().build().expect("Event loop didn't build");
+    let event_loop = EventLoopBuilder::new()
+        .build()
+        .expect("Event loop didn't build");
     let window_builder = WindowBuilder::new()
         .with_title("onlyopps (Every opp shot) (Opp Stoppa - YBN Nahmir) - Justin Jazzy Not");
     let (window, display) = SimpleWindowBuilder::new()
@@ -26,17 +32,28 @@ fn main() {
         .build(&event_loop);
 
     let mut renderer = Renderer::new(&display);
-    let mut manager = ResourceManager::new(&display, &renderer);
+    let mut manager = ResourceManager::new(&display);
 
     let mut world = World::<Registry, _>::with_resources(resources!(
-        CameraResource::new(60_f32.to_radians(), window.inner_size().width as f32 / window.inner_size().height as f32),
+        CameraResource::new(
+            60_f32.to_radians(),
+            window.inner_size().width as f32 / window.inner_size().height as f32
+        ),
         TimerResource::new(Duration::from_secs_f32(1 as f32 / 10 as f32)),
         InputResource::new(&window),
         window,
     ));
 
     world.insert(entity!(
-        TransformComponent::from_mat4(Mat4::from_rotation_translation(Quat::from_euler(glam::EulerRot::XYZ, 40_f32.to_radians(), 0.0, 40_f32.to_radians()), Vec3::new(0.0, 0.0, 5.0))),
+        TransformComponent::from_mat4(Mat4::from_rotation_translation(
+            Quat::from_euler(
+                glam::EulerRot::XYZ,
+                40_f32.to_radians(),
+                0.0,
+                40_f32.to_radians()
+            ),
+            Vec3::new(0.0, 0.0, 5.0)
+        )),
         DrawComponent::load(&mut manager, &Default::default())
     ));
 
@@ -53,7 +70,9 @@ fn main() {
 
                 match event {
                     WindowEvent::CloseRequested => window_target.exit(),
-                    WindowEvent::Resized(size) => world.get_mut::<CameraResource, _>().resize(size.width as f32 / size.height as f32),
+                    WindowEvent::Resized(size) => world
+                        .get_mut::<CameraResource, _>()
+                        .resize(size.width as f32 / size.height as f32),
                     _ => (),
                 }
             }

@@ -1,3 +1,3 @@
 pub mod camera;
-pub mod time;
 pub mod input;
+pub mod time;

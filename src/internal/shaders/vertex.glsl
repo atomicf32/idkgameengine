@@ -1,12 +1,12 @@
-#version 330 core
+#version 330
 
 in vec3 position;
-
-out vec4 fragcolor;
+in vec2 tex_coords;
+out vec2 frag_tex_coords;
 
 uniform mat4 matrix;
 
 void main() {
     gl_Position = matrix * vec4(position, 1.0);
-    fragcolor = gl_Position;
+    frag_tex_coords = tex_coords;
 }
