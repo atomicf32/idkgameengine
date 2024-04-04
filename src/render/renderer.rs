@@ -65,7 +65,7 @@ impl System for Renderer {
 						i,
 						&render.shader.as_ref(),
 						&uniform! {
-							matrix: camera.transform(transform.inner())
+							matrix: camera.transform(*transform.inner())
 						},
 						&draw_parameters
 					).unwrap();
@@ -76,7 +76,7 @@ impl System for Renderer {
 						glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
 						&render.shader.as_ref(),
 						&uniform! {
-							matrix: camera.transform(transform.inner())
+							matrix: camera.transform(*transform.inner())
 						},
 						&draw_parameters
 					).unwrap();

@@ -22,4 +22,12 @@ impl CameraResource {
 	pub fn transform(&self, model: Mat4) -> [[f32; 4]; 4] {
 		(self.projection * self.view.inverse() * model).to_cols_array_2d()
 	}
+
+	pub fn transform_global(&mut self, mat: Mat4) {
+		self.view = mat * self.view;
+	}
+
+	pub fn transform_local(&mut self, mat: Mat4) {
+		self.view *= mat;
+	}
 }

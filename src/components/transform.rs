@@ -15,8 +15,8 @@ impl TransformComponent {
 		Self(Mat4::from_translation(Vec3::new(x, y, z)))
 	}
 
-	pub fn inner(&self) -> Mat4 {
-		self.0
+	pub fn inner<'a>(&'a self) -> &'a Mat4 {
+		&self.0
 	}
 
 	pub fn transform_global(&mut self, mat: Mat4) {
