@@ -4,18 +4,18 @@ pub mod resource_manager;
 pub mod resources;
 pub mod systems;
 
-use std::time::Duration;
+use std::{num::NonZeroU32, time::Duration};
 
 use brood::{entity, resources, schedule, system::schedule::task, World};
 use glam::{Mat4, Quat, Vec3};
-use glium::backend::glutin::SimpleWindowBuilder;
+use glium::Display;
+use glutin::{config::ConfigTemplateBuilder, context::NotCurrentGlContext, display::{GetGlDisplay, GlDisplay}, surface::GlSurface};
+use raw_window_handle::HasRawWindowHandle;
 use resource_manager::ResourceManager;
 use resources::{camera::CameraResource, input::InputResource, time::TimerResource, ExitResource};
 use systems::{camera_system::CameraSystem, close_system::CloseSystem, spin_system::SpinCube};
 use winit::{
-    event::{Event, WindowEvent},
-    event_loop::EventLoopBuilder,
-    window::{CursorGrabMode, WindowBuilder},
+    event::{Event, WindowEvent}, event_loop::EventLoopBuilder, window::{CursorGrabMode, WindowBuilder}
 };
 
 use components::{draw::DrawComponent, transform::TransformComponent, Registry};
@@ -25,11 +25,41 @@ fn main() {
     let event_loop = EventLoopBuilder::new()
         .build()
         .expect("Event loop didn't build");
-    let window_builder = WindowBuilder::new()
-        .with_title("onlyopps (Every opp shot) (Opp Stoppa - YBN Nahmir) - Justin Jazzy Not");
-    let (window, display) = SimpleWindowBuilder::new()
-        .set_window_builder(window_builder)
-        .build(&event_loop);
+    let (window, display) = {
+        let window_builder = WindowBuilder::new()
+            .with_title("onlyopps (Every opp shot) (Opp Stoppa - YBN Nahmir) - Justin Jazzy Not");
+        let display_builder = glutin_winit::DisplayBuilder::new()
+            .with_window_builder(Some(window_builder));
+        let config_template_builder = ConfigTemplateBuilder::new();
+        let (window, gl_config) = display_builder.build(&event_loop, config_template_builder, |mut configs| {
+            configs.next().unwrap()
+        }).unwrap();
+        let window = window.unwrap();
+        let (width, height) = window.inner_size().into();
+        let attrs = glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
+            .build(
+                window.raw_window_handle(),
+                NonZeroU32::new(width).unwrap(),
+                NonZeroU32::new(height).unwrap()
+            );
+
+        let surface = unsafe { gl_config.display().create_window_surface(&gl_config, &attrs).unwrap() };
+        
+        let context_attributes = glutin::context::ContextAttributesBuilder::new()
+            .build(Some(window.raw_window_handle()));
+        let current_context = Some(unsafe {
+            gl_config.display().create_context(&gl_config, &context_attributes).expect("failed to create context")
+        }).unwrap().make_current(&surface).unwrap();
+
+        // Vsync
+        surface.set_swap_interval(&current_context, glutin::surface::SwapInterval::Wait(unsafe { NonZeroU32::new_unchecked(1) })).unwrap();
+
+        let display = Display::from_context_surface(current_context, surface).unwrap();
+
+        (window, display)
+    };
+
+    event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
 
     window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
     window.set_cursor_visible(false);
@@ -70,7 +100,6 @@ fn main() {
     );
 
     let _ = event_loop.run(move |event, window_target| {
-        window_target.set_control_flow(winit::event_loop::ControlFlow::Poll);
         match event {
             Event::DeviceEvent { event, .. } => {
                 world.get_mut::<InputResource, _>().device_event(&event);
