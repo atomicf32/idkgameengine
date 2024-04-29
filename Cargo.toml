@@ -1,5 +1,5 @@
 [package]
-name = "rust_ogl"
+name = "idkgameengine"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,3 +15,4 @@ image = "0.25.1"
 jumprope = "1.1.2"
 winit = { version = "0.29.15", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"] }
 raw-window-handle = "0.5.2"
+bitvec = "1.0.1"

@@ -36,7 +36,7 @@ impl System for CameraSystem {
     {
         let result!(camera, input, timer) = query_result.resources;
 
-        camera.transform_local(Mat4::from_quat(Quat::from_euler(
+        camera.transform_local(&Mat4::from_quat(Quat::from_euler(
             glam::EulerRot::XYZ,
             input.get_mouse_delta().y * CAMERA_SENS,
             input.get_mouse_delta().x * CAMERA_SENS,
@@ -44,42 +44,42 @@ impl System for CameraSystem {
         )));
 
         if input.key_pressed(KeyCode::KeyW) {
-            camera.transform_local(Mat4::from_translation(Vec3::new(
+            camera.transform_local(&Mat4::from_translation(Vec3::new(
                 0.0,
                 0.0,
                 CAMERA_SPEED * timer.get_dt(),
             )))
         }
         if input.key_pressed(KeyCode::KeyA) {
-            camera.transform_local(Mat4::from_translation(Vec3::new(
+            camera.transform_local(&Mat4::from_translation(Vec3::new(
                 -CAMERA_SPEED * timer.get_dt(),
                 0.0,
                 0.0,
             )))
         }
         if input.key_pressed(KeyCode::KeyS) {
-            camera.transform_local(Mat4::from_translation(Vec3::new(
+            camera.transform_local(&Mat4::from_translation(Vec3::new(
                 0.0,
                 0.0,
                 -CAMERA_SPEED * timer.get_dt(),
             )))
         }
         if input.key_pressed(KeyCode::KeyD) {
-            camera.transform_local(Mat4::from_translation(Vec3::new(
+            camera.transform_local(&Mat4::from_translation(Vec3::new(
                 CAMERA_SPEED * timer.get_dt(),
                 0.0,
                 0.0,
             )))
         }
         if input.key_pressed(KeyCode::KeyQ) {
-            camera.transform_local(Mat4::from_translation(Vec3::new(
+            camera.transform_local(&Mat4::from_translation(Vec3::new(
                 0.0,
                 CAMERA_SPEED * timer.get_dt(),
                 0.0,
             )))
         }
         if input.key_pressed(KeyCode::KeyE) {
-            camera.transform_local(Mat4::from_translation(Vec3::new(
+            camera.transform_local(&Mat4::from_translation(Vec3::new(
                 0.0,
                 -CAMERA_SPEED * timer.get_dt(),
                 0.0,

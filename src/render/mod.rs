@@ -1,29 +1,17 @@
-use std::path::Path;
+use std::any::Any;
 
-use glium::implement_vertex;
+use brood::World;
+use winit::window::Window;
 
-pub mod mesh;
-pub mod renderer;
+use crate::{components::{draw::DrawComponent, Registry}, resources::Resources};
 
-#[derive(Copy, Clone)]
-pub struct Vertex {
-    position: [f32; 3],
-    tex_coords: [f32; 2],
-}
-implement_vertex!(Vertex, position, tex_coords);
-
-impl Vertex {
-    pub fn new(x: f32, y: f32, z: f32, u: f32, v: f32) -> Self {
-        Self {
-            position: [x, y, z],
-            tex_coords: [u, v],
-        }
-    }
+pub mod ogl_renderer;
+pub trait Renderer {
+    fn get_window(&self) -> &Window;
+    fn render(&mut self, world: &mut World<Registry, Resources>);
+    fn load(&mut self, mesh_name: &str, texture_name: &str) -> DrawComponent;
 }
 
-#[derive(PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct ShaderDescriptor {
-    vertex: &'static Path,
-    fragment: &'static Path,
-    geometry: Option<&'static Path>,
+pub trait DrawData {
+    fn as_any(&self) -> &dyn Any;
 }
