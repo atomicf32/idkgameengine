@@ -1,12 +1,12 @@
-use std::{collections::HashMap, fs, num::NonZeroU32, rc::{Rc, Weak}};
+use std::{borrow::Cow, collections::HashMap, fs, num::NonZeroU32, path::{Path, PathBuf}, rc::{Rc, Weak}};
 
 use brood::{query::filter, registry, result, system::System, Views};
 use glium::{glutin::surface::WindowSurface, implement_vertex, texture::RawImage2d, uniform, Display, DrawParameters, Program, Surface, Texture2d};
-use glutin::{config::ConfigTemplateBuilder, context::NotCurrentGlContext, display::{GetGlDisplay, GlDisplay}};
-use raw_window_handle::HasRawWindowHandle;
-use winit::{event_loop::EventLoop, window::{Window, WindowBuilder}};
+use glutin::{config::{ConfigTemplate, ConfigTemplateBuilder}, context::NotCurrentGlContext, display::{GetGlDisplay, GlDisplay}, surface::GlSurface};
+use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
+use winit::{event_loop::EventLoop, window::Window};
 use glium::{index::IndexBufferAny, vertex::VertexBufferAny};
-use crate::{components::{draw::DrawComponent, transform::TransformComponent}, resources::camera::CameraResource, DrawData, Renderer};
+use crate::{components::{draw::DrawComponent, transform::TransformComponent}, resources::camera::CameraResource, DrawData, DrawDescriptor, Mesh, Renderer};
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -24,13 +24,13 @@ impl Vertex {
     }
 }
 
-struct Mesh {
+struct OglMesh {
     vertex_buffer: VertexBufferAny,
     indices: Option<IndexBufferAny>,
 }
 
 struct OglDrawData {
-    mesh: Rc<Mesh>,
+    mesh: Rc<OglMesh>,
     texture: Rc<Texture2d>,
 }
 
@@ -41,22 +41,22 @@ impl DrawData for OglDrawData {
 }
 
 pub struct OglRenderer {
-    window: Window,
     display: Display<WindowSurface>,
     program: Program,
-    meshes: HashMap<String, Weak<Mesh>>,
-    textures: HashMap<String, Weak<Texture2d>>,
+    meshes: HashMap<Mesh, Weak<OglMesh>>,
+    textures: HashMap<Cow<'static, Path>, Weak<Texture2d>>,
 }
 
 impl OglRenderer {
-    pub fn new(event_loop: &EventLoop<()>, window_builder: WindowBuilder) -> Self {
-        let display_builder = glutin_winit::DisplayBuilder::new()
-            .with_window_builder(Some(window_builder));
-        let config_template_builder = ConfigTemplateBuilder::new();
-        let (window, gl_config) = display_builder.build(event_loop, config_template_builder, |mut configs| {
-            configs.next().unwrap()
-        }).unwrap();
-        let window = window.unwrap();
+    pub fn new(window: &Window) -> Self {
+        #[cfg(target_os = "windows")]
+        let glutin_display = unsafe { glutin::display::Display::new(
+            window.raw_display_handle(),
+            glutin::display::DisplayApiPreference::EglThenWgl(Some(window.raw_window_handle()))
+        ) }.unwrap();
+
+        let gl_config = unsafe { glutin_display.find_configs(ConfigTemplate::default()) }.unwrap().next().unwrap();
+        
         let (width, height) = window.inner_size().into();
         let attrs = glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
             .build(
@@ -65,7 +65,7 @@ impl OglRenderer {
                 NonZeroU32::new(height).unwrap()
             );
 
-        let surface = unsafe { gl_config.display().create_window_surface(&gl_config, &attrs).unwrap() };
+        let surface = unsafe { glutin_display.create_window_surface(&gl_config, &attrs).unwrap() };
         
         let context_attributes = glutin::context::ContextAttributesBuilder::new()
             .build(Some(window.raw_window_handle()));
@@ -86,19 +86,19 @@ impl OglRenderer {
         ).unwrap();
 
         let mut meshes = HashMap::new();
-        meshes.insert("internal::triangle".to_owned(), unsafe {
+        meshes.insert(Mesh::Triangle, unsafe {
             let rc = Rc::new(gen_triangle(&display));
             let raw = Rc::into_raw(rc);
             Rc::increment_strong_count(raw);
             Weak::from_raw(raw)
         });
-        meshes.insert("internal::square".to_owned(), unsafe {
+        meshes.insert(Mesh::Square, unsafe {
             let rc = Rc::new(gen_square(&display));
             let raw = Rc::into_raw(rc);
             Rc::increment_strong_count(raw);
             Weak::from_raw(raw)
         });
-        meshes.insert("internal::cube".to_owned(), unsafe {
+        meshes.insert(Mesh::Cube, unsafe {
             let rc = Rc::new(gen_cube(&display));
             let raw = Rc::into_raw(rc);
             Rc::increment_strong_count(raw);
@@ -106,7 +106,6 @@ impl OglRenderer {
         });
 
         Self {
-            window,
             display,
             program,
             meshes,
@@ -114,17 +113,55 @@ impl OglRenderer {
         }
     }
 
-    fn load_mesh(&mut self, mesh_name: &str) -> Rc<Mesh> {
+    fn load_mesh(&mut self, mesh_name: &Mesh) -> Rc<OglMesh> {
         if let Some(i) = self.meshes.get(mesh_name) {
             if let Some(strong) = i.upgrade() {
                 return strong;
             }
         }
 
-        todo!()
+        let mesh = match mesh_name {
+            Mesh::Gltf(path) => {
+                let gltf = easy_gltf::load(path).unwrap();
+                let scene = &gltf[0];
+                let model = &scene.models[0];
+
+                let mut vertices = Vec::with_capacity(model.vertices().len());
+
+                for i in model.vertices() {
+                    vertices.push(Vertex::new(i.position.x, i.position.y, i.position.z, i.tex_coords.x, i.tex_coords.y))
+                }
+
+                let mut indices = None;
+
+                if let Some(i) = model.indices() {
+                    indices = Some(
+                        glium::IndexBuffer::new(
+                            &self.display,
+                            glium::index::PrimitiveType::TrianglesList,
+                            &i,
+                        )
+                        .unwrap()
+                        .into(),
+                    );
+                }
+
+                Rc::new(OglMesh {
+                    vertex_buffer: glium::VertexBuffer::new(&self.display, &vertices)
+                        .unwrap()
+                        .into(),
+                    indices,
+                })
+            },
+            _ => panic!("Internal mesh not in hashmap?")
+        };
+
+        self.meshes.insert(mesh_name.clone(), Rc::downgrade(&mesh));
+
+        mesh
     }
 
-    fn load_texture(&mut self, texture_name: &str) -> Rc<Texture2d> {
+    fn load_texture(&mut self, texture_name: &Cow<'static, Path>) -> Rc<Texture2d> {
         if let Some(i) = self.textures.get(texture_name) {
             if let Some(strong) = i.upgrade() {
                 return strong;
@@ -140,25 +177,21 @@ impl OglRenderer {
         let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
         let texture = Rc::new(Texture2d::new(&self.display, image).unwrap());
 
-        self.textures.insert(texture_name.to_owned(), Rc::downgrade(&texture));
+        self.textures.insert(texture_name.clone(), Rc::downgrade(&texture));
 
         texture
     }
 }
 
 impl Renderer for OglRenderer {
-    fn get_window(&self) -> &Window {
-        &self.window
-    }
-    
     fn render(&mut self, world: &mut brood::World<crate::components::Registry, crate::resources::Resources>) {
         world.run_system(self);
     }
     
-    fn load(&mut self, mesh_name: &str, texture_name: &str) -> DrawComponent {
+    fn load(&mut self, descriptor: &DrawDescriptor) -> DrawComponent {
         DrawComponent { inner: Box::new(OglDrawData {
-            mesh: self.load_mesh(mesh_name),
-            texture: self.load_texture(texture_name),
+            mesh: self.load_mesh(&descriptor.mesh),
+            texture: self.load_texture(&descriptor.texture),
         })}
     }
 }
@@ -236,14 +269,14 @@ impl System for OglRenderer {
     }
 }
 
-fn gen_triangle(display: &Display<WindowSurface>) -> Mesh {
+fn gen_triangle(display: &Display<WindowSurface>) -> OglMesh {
     let triangle_verts = vec![
         Vertex::new(-0.5, -0.5, 0.0, 0.0, 0.0),
         Vertex::new(0.5, -0.5, 0.0, 1.0, 0.0),
         Vertex::new(0.0, 0.5, 0.0, 1.0, 1.0),
     ];
 
-    Mesh {
+    OglMesh {
         vertex_buffer: glium::VertexBuffer::new(display, &triangle_verts)
             .unwrap()
             .into(),
@@ -251,7 +284,7 @@ fn gen_triangle(display: &Display<WindowSurface>) -> Mesh {
     }
 }
 
-fn gen_square(display: &Display<WindowSurface>) -> Mesh {
+fn gen_square(display: &Display<WindowSurface>) -> OglMesh {
     let square_verts = vec![
         Vertex::new(0.5, 0.5, 0.0, 1.0, 1.0),
         Vertex::new(0.5, -0.5, 0.0, 1.0, 0.0),
@@ -261,7 +294,7 @@ fn gen_square(display: &Display<WindowSurface>) -> Mesh {
 
     let square_indices: Vec<u32> = vec![0, 1, 3, 1, 2, 3];
 
-    Mesh {
+    OglMesh {
         vertex_buffer: glium::VertexBuffer::new(display, &square_verts)
             .unwrap()
             .into(),
@@ -277,7 +310,7 @@ fn gen_square(display: &Display<WindowSurface>) -> Mesh {
     }
 }
 
-fn gen_cube(display: &Display<WindowSurface>) -> Mesh {
+fn gen_cube(display: &Display<WindowSurface>) -> OglMesh {
     let cube_verts = vec![
         Vertex::new(-0.5, -0.5, -0.5, 0.0, 0.0),
         Vertex::new(0.5, -0.5, -0.5, 1.0, 0.0),
@@ -317,7 +350,7 @@ fn gen_cube(display: &Display<WindowSurface>) -> Mesh {
         Vertex::new(-0.5, 0.5, -0.5, 0.0, 1.0),
     ];
 
-    Mesh {
+    OglMesh {
         vertex_buffer: glium::VertexBuffer::new(display, &cube_verts)
             .unwrap()
             .into(),

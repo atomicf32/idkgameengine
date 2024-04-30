@@ -3,7 +3,6 @@ use winit::{
     dpi::PhysicalPosition,
     event::{DeviceEvent, MouseButton, MouseScrollDelta, WindowEvent},
     keyboard::{KeyCode, PhysicalKey},
-    window::Window,
 };
 
 pub struct InputResource {
@@ -16,9 +15,9 @@ pub struct InputResource {
 }
 
 impl InputResource {
-    pub fn new(window: &Window) -> Self {
+    pub fn new(focused: bool) -> Self {
         Self {
-            focused: window.has_focus(),
+            focused,
             cursor_pos: PhysicalPosition { x: 0.0, y: 0.0 },
             scroll_delta: PhysicalPosition { x: 0.0, y: 0.0 },
             mouse_delta: PhysicalPosition { x: 0.0, y: 0.0 },
