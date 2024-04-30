@@ -11,7 +11,7 @@ use glam::{Mat4, Quat, Vec3};
 use resources::{camera::CameraResource, input::InputResource, time::TimerResource, ExitResource, Resources};
 use systems::{camera_system::CameraSystem, close_system::CloseSystem, spin_system::SpinCube};
 use winit::{
-    event::{Event, WindowEvent}, event_loop::EventLoopBuilder, window::{CursorGrabMode, Window, WindowAttributes}
+    event::{Event, WindowEvent}, event_loop::EventLoopBuilder, window::{CursorGrabMode, WindowAttributes}
 };
 
 use components::{transform::TransformComponent, Registry};

@@ -1,10 +1,10 @@
-use std::{borrow::Cow, collections::HashMap, fs, num::NonZeroU32, path::{Path, PathBuf}, rc::{Rc, Weak}};
+use std::{borrow::Cow, collections::HashMap, fs, num::NonZeroU32, path::Path, rc::{Rc, Weak}};
 
 use brood::{query::filter, registry, result, system::System, Views};
 use glium::{glutin::surface::WindowSurface, implement_vertex, texture::RawImage2d, uniform, Display, DrawParameters, Program, Surface, Texture2d};
-use glutin::{config::{ConfigTemplate, ConfigTemplateBuilder}, context::NotCurrentGlContext, display::{GetGlDisplay, GlDisplay}, surface::GlSurface};
+use glutin::{config::ConfigTemplate, context::NotCurrentGlContext, display::{GetGlDisplay, GlDisplay}};
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
-use winit::{event_loop::EventLoop, window::Window};
+use winit::window::Window;
 use glium::{index::IndexBufferAny, vertex::VertexBufferAny};
 use crate::{components::{draw::DrawComponent, transform::TransformComponent}, resources::camera::CameraResource, DrawData, DrawDescriptor, Mesh, Renderer};
 

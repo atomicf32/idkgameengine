@@ -1,7 +1,6 @@
 use std::{any::Any, borrow::Cow, path::Path};
 
 use brood::World;
-use winit::window::Window;
 
 use crate::{components::{draw::DrawComponent, Registry}, resources::Resources};
 
