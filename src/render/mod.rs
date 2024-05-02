@@ -2,7 +2,10 @@ use std::{any::Any, borrow::Cow, path::Path};
 
 use brood::World;
 
-use crate::{components::{draw::DrawComponent, Registry}, resources::Resources};
+use crate::{
+    components::{draw::DrawComponent, Registry},
+    resources::Resources,
+};
 
 pub mod ogl_renderer;
 
@@ -25,5 +28,5 @@ pub enum Mesh {
     Triangle,
     Square,
     Cube,
-    Gltf(Cow<'static, Path>)
+    Gltf(Cow<'static, Path>),
 }

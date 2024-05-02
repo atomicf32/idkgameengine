@@ -1,5 +1,5 @@
 use crate::DrawData;
 
 pub struct DrawComponent {
-    pub inner: Box<dyn DrawData>
+    pub inner: Box<dyn DrawData>,
 }

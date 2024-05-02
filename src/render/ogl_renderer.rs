@@ -1,12 +1,30 @@
-use std::{borrow::Cow, collections::HashMap, fs, num::NonZeroU32, path::Path, rc::{Rc, Weak}};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    fs,
+    num::NonZeroU32,
+    path::Path,
+    rc::{Rc, Weak},
+};
 
+use crate::{
+    components::{draw::DrawComponent, transform::TransformComponent},
+    resources::camera::CameraResource,
+    DrawData, DrawDescriptor, Mesh, Renderer,
+};
 use brood::{query::filter, registry, result, system::System, Views};
-use glium::{glutin::surface::WindowSurface, implement_vertex, texture::RawImage2d, uniform, Display, DrawParameters, Program, Surface, Texture2d};
-use glutin::{config::ConfigTemplate, context::NotCurrentGlContext, display::{GetGlDisplay, GlDisplay}};
+use glium::{
+    glutin::surface::WindowSurface, implement_vertex, texture::RawImage2d, uniform, Display,
+    DrawParameters, Program, Surface, Texture2d,
+};
+use glium::{index::IndexBufferAny, vertex::VertexBufferAny};
+use glutin::{
+    config::ConfigTemplate,
+    context::NotCurrentGlContext,
+    display::{GetGlDisplay, GlDisplay},
+};
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use winit::window::Window;
-use glium::{index::IndexBufferAny, vertex::VertexBufferAny};
-use crate::{components::{draw::DrawComponent, transform::TransformComponent}, resources::camera::CameraResource, DrawData, DrawDescriptor, Mesh, Renderer};
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -50,28 +68,45 @@ pub struct OglRenderer {
 impl OglRenderer {
     pub fn new(window: &Window) -> Self {
         #[cfg(target_os = "windows")]
-        let glutin_display = unsafe { glutin::display::Display::new(
-            window.raw_display_handle(),
-            glutin::display::DisplayApiPreference::EglThenWgl(Some(window.raw_window_handle()))
-        ) }.unwrap();
+        let glutin_display = unsafe {
+            glutin::display::Display::new(
+                window.raw_display_handle(),
+                glutin::display::DisplayApiPreference::EglThenWgl(Some(window.raw_window_handle())),
+            )
+        }
+        .unwrap();
 
-        let gl_config = unsafe { glutin_display.find_configs(ConfigTemplate::default()) }.unwrap().next().unwrap();
-        
+        let gl_config = unsafe { glutin_display.find_configs(ConfigTemplate::default()) }
+            .unwrap()
+            .next()
+            .unwrap();
+
         let (width, height) = window.inner_size().into();
-        let attrs = glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
-            .build(
-                window.raw_window_handle(),
-                NonZeroU32::new(width).unwrap(),
-                NonZeroU32::new(height).unwrap()
-            );
+        let attrs =
+            glutin::surface::SurfaceAttributesBuilder::<glutin::surface::WindowSurface>::new()
+                .build(
+                    window.raw_window_handle(),
+                    NonZeroU32::new(width).unwrap(),
+                    NonZeroU32::new(height).unwrap(),
+                );
 
-        let surface = unsafe { glutin_display.create_window_surface(&gl_config, &attrs).unwrap() };
-        
+        let surface = unsafe {
+            glutin_display
+                .create_window_surface(&gl_config, &attrs)
+                .unwrap()
+        };
+
         let context_attributes = glutin::context::ContextAttributesBuilder::new()
             .build(Some(window.raw_window_handle()));
         let current_context = Some(unsafe {
-            gl_config.display().create_context(&gl_config, &context_attributes).expect("failed to create context")
-        }).unwrap().make_current(&surface).unwrap();
+            gl_config
+                .display()
+                .create_context(&gl_config, &context_attributes)
+                .expect("failed to create context")
+        })
+        .unwrap()
+        .make_current(&surface)
+        .unwrap();
 
         // Vsync
         // surface.set_swap_interval(&current_context, glutin::surface::SwapInterval::Wait(unsafe { NonZeroU32::new_unchecked(1) })).unwrap();
@@ -80,10 +115,15 @@ impl OglRenderer {
 
         let program = Program::from_source(
             &display,
-            fs::read_to_string("res/shaders/vertex.glsl").unwrap().as_str(),
-            fs::read_to_string("res/shaders/fragment.glsl").unwrap().as_str(),
+            fs::read_to_string("res/shaders/vertex.glsl")
+                .unwrap()
+                .as_str(),
+            fs::read_to_string("res/shaders/fragment.glsl")
+                .unwrap()
+                .as_str(),
             None,
-        ).unwrap();
+        )
+        .unwrap();
 
         let mut meshes = HashMap::new();
         meshes.insert(Mesh::Triangle, unsafe {
@@ -129,7 +169,13 @@ impl OglRenderer {
                 let mut vertices = Vec::with_capacity(model.vertices().len());
 
                 for i in model.vertices() {
-                    vertices.push(Vertex::new(i.position.x, i.position.y, i.position.z, i.tex_coords.x, i.tex_coords.y))
+                    vertices.push(Vertex::new(
+                        i.position.x,
+                        i.position.y,
+                        i.position.z,
+                        i.tex_coords.x,
+                        i.tex_coords.y,
+                    ))
                 }
 
                 let mut indices = None;
@@ -152,8 +198,8 @@ impl OglRenderer {
                         .into(),
                     indices,
                 })
-            },
-            _ => panic!("Internal mesh not in hashmap?")
+            }
+            _ => panic!("Internal mesh not in hashmap?"),
         };
 
         self.meshes.insert(mesh_name.clone(), Rc::downgrade(&mesh));
@@ -177,22 +223,28 @@ impl OglRenderer {
         let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
         let texture = Rc::new(Texture2d::new(&self.display, image).unwrap());
 
-        self.textures.insert(texture_name.clone(), Rc::downgrade(&texture));
+        self.textures
+            .insert(texture_name.clone(), Rc::downgrade(&texture));
 
         texture
     }
 }
 
 impl Renderer for OglRenderer {
-    fn render(&mut self, world: &mut brood::World<crate::components::Registry, crate::resources::Resources>) {
+    fn render(
+        &mut self,
+        world: &mut brood::World<crate::components::Registry, crate::resources::Resources>,
+    ) {
         world.run_system(self);
     }
-    
+
     fn load(&mut self, descriptor: &DrawDescriptor) -> DrawComponent {
-        DrawComponent { inner: Box::new(OglDrawData {
-            mesh: self.load_mesh(&descriptor.mesh),
-            texture: self.load_texture(&descriptor.texture),
-        })}
+        DrawComponent {
+            inner: Box::new(OglDrawData {
+                mesh: self.load_mesh(&descriptor.mesh),
+                texture: self.load_texture(&descriptor.texture),
+            }),
+        }
     }
 }
 

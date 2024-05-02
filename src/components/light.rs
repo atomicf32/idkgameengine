@@ -1,3 +1,1 @@
-pub enum LightComponent {
-
-}
+pub enum LightComponent {}
