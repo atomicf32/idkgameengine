@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 pub mod components;
 pub mod render;
 pub mod resources;
@@ -25,7 +27,7 @@ use winit::{
 use components::{transform::TransformComponent, Registry};
 use render::{ogl_renderer::OglRenderer, *};
 
-const FULLSCREEN: bool = false;
+const FULLSCREEN: bool = true;
 const TARGET_FRAMERATE: f64 = 360.0;
 const TARGET_FRAMETIME: Duration = Duration::from_nanos((1000000000_f64/TARGET_FRAMERATE) as u64);
 
@@ -110,9 +112,8 @@ fn main() {
         task::System(CloseSystem),
     );
 
-    let mut average_dt = SingleSumSMA::<_, _, 1000>::from_zero(Duration::ZERO);
+    let mut average_dt = SingleSumSMA::<_, _, 50>::from_zero(Duration::ZERO);
     let mut next_frame_start_instant = Instant::now();
-    let mut average_frametime = SingleSumSMA::<_, _, 100>::from_zero(Duration::ZERO);
 
     event_loop.run(move |event, window_target| match event {
         Event::DeviceEvent { event, .. } => {
@@ -147,9 +148,9 @@ fn main() {
                 average_dt.add_sample(world.get::<TimerResource, _>().get_dt());
                 println!("{:.0} FPS", average_dt.get_average().as_secs_f32().recip());
 
-                average_frametime.add_sample(Instant::now() - start);
+                let frametime = Instant::now() - start;
 
-                next_frame_start_instant = Instant::now() + TARGET_FRAMETIME - average_frametime.get_average();
+                next_frame_start_instant = Instant::now() + TARGET_FRAMETIME - frametime;
             }
         }
         _ => (),
