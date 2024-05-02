@@ -1,29 +1,36 @@
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Quat, Vec3};
 
-pub struct TransformComponent(Mat4);
+pub struct TransformComponent {
+    pub translation: Vec3,
+    pub rotation: Quat,
+    pub scale: Vec3,
+}
 
 impl TransformComponent {
+    const IDENTITY: Self = Self {
+                translation: Vec3::ZERO,
+                rotation: Quat::IDENTITY,
+                scale: Vec3::ONE,
+            };
+
     pub fn new() -> Self {
-        Self(Mat4::IDENTITY)
+        Self::IDENTITY
     }
 
     pub fn from_mat4(mat: Mat4) -> Self {
-        Self(mat)
+        let (scale, rotation, translation) = mat.to_scale_rotation_translation();
+        
+        Self {
+            scale,
+            rotation,
+            translation
+        }
     }
 
     pub fn from_position(x: f32, y: f32, z: f32) -> Self {
-        Self(Mat4::from_translation(Vec3::new(x, y, z)))
-    }
-
-    pub fn inner<'a>(&'a self) -> &'a Mat4 {
-        &self.0
-    }
-
-    pub fn transform_global(&mut self, mat: Mat4) {
-        self.0 = mat * self.0;
-    }
-
-    pub fn transform_local(&mut self, mat: Mat4) {
-        self.0 *= mat;
+        Self {
+            translation: Vec3::new(x, y, z),
+            ..Self::IDENTITY
+        }
     }
 }

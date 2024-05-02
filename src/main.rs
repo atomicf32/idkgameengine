@@ -3,17 +3,18 @@ pub mod render;
 pub mod resources;
 pub mod systems;
 
-use std::{path::Path, time::Duration};
+use std::{path::Path, time::{Duration, Instant}};
 
 use brood::{entity, resources, schedule, system::schedule::task, World};
 use glam::{Mat4, Quat, Vec3};
 
 use resources::{
     camera::CameraResource,
-    input::{InputResource, TickInput},
-    time::{TickTimer, TimerResource},
+    input::InputResource,
+    time::TimerResource,
     ExitResource, Resources,
 };
+use simple_moving_average::{SingleSumSMA, SMA};
 use systems::{camera_system::CameraSystem, close_system::CloseSystem, spin_system::SpinCube};
 use winit::{
     event::{Event, WindowEvent},
@@ -23,6 +24,10 @@ use winit::{
 
 use components::{transform::TransformComponent, Registry};
 use render::{ogl_renderer::OglRenderer, *};
+
+const FULLSCREEN: bool = false;
+const TARGET_FRAMERATE: f64 = 360.0;
+const TARGET_FRAMETIME: Duration = Duration::from_nanos((1000000000_f64/TARGET_FRAMERATE) as u64);
 
 fn main() {
     let event_loop = EventLoopBuilder::new()
@@ -36,19 +41,21 @@ fn main() {
 
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
 
-    window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-    window.set_cursor_visible(false);
-    window
-        .set_cursor_grab(CursorGrabMode::Confined)
-        .or_else(|_e| window.set_cursor_grab(CursorGrabMode::Locked))
-        .unwrap();
+    if FULLSCREEN {
+        window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+        window.set_cursor_visible(false);
+        window
+            .set_cursor_grab(CursorGrabMode::Confined)
+            .or_else(|_e| window.set_cursor_grab(CursorGrabMode::Locked))
+            .unwrap();
+    }
 
     let mut world = World::<Registry, Resources>::with_resources(resources!(
         CameraResource::new(
             60_f32.to_radians(),
             window.inner_size().width as f32 / window.inner_size().height as f32
         ),
-        TimerResource::new(Duration::from_secs_f32(1 as f32 / 10 as f32)),
+        TimerResource::new(Duration::from_millis(100)),
         InputResource::new(window.has_focus()),
         ExitResource(false),
     ));
@@ -99,13 +106,15 @@ fn main() {
 
     let mut schedule = schedule!(
         task::System(SpinCube),
-        task::System(CameraSystem),
+        task::System(CameraSystem::default()),
         task::System(CloseSystem),
     );
 
-    let mut tick_schedule = schedule!(task::System(TickTimer), task::System(TickInput));
+    let mut average_dt = SingleSumSMA::<_, _, 1000>::from_zero(Duration::ZERO);
+    let mut next_frame_start_instant = Instant::now();
+    let mut average_frametime = SingleSumSMA::<_, _, 100>::from_zero(Duration::ZERO);
 
-    let _ = event_loop.run(move |event, window_target| match event {
+    event_loop.run(move |event, window_target| match event {
         Event::DeviceEvent { event, .. } => {
             world.get_mut::<InputResource, _>().device_event(&event);
         }
@@ -117,20 +126,32 @@ fn main() {
                 WindowEvent::Resized(size) => world
                     .get_mut::<CameraResource, _>()
                     .resize(size.width as f32 / size.height as f32),
-                WindowEvent::RedrawRequested => {
-                    world.run_schedule(&mut schedule);
-                    renderer.render(&mut world);
-                    world.run_schedule(&mut tick_schedule);
-                    if world.get::<ExitResource, _>().0 {
-                        window_target.exit();
-                    }
-                }
                 _ => (),
             }
         }
         Event::AboutToWait => {
-            window.request_redraw();
+            if Instant::now() >= next_frame_start_instant {
+                let start = Instant::now();
+
+                world.run_schedule(&mut schedule);
+
+                renderer.render(&mut world);
+                
+                if world.get::<ExitResource, _>().0 {
+                    window_target.exit();
+                }
+
+                world.get_mut::<InputResource, _>().tick();
+                world.get_mut::<TimerResource, _>().tick();
+
+                average_dt.add_sample(world.get::<TimerResource, _>().get_dt());
+                println!("{:.0} FPS", average_dt.get_average().as_secs_f32().recip());
+
+                average_frametime.add_sample(Instant::now() - start);
+
+                next_frame_start_instant = Instant::now() + TARGET_FRAMETIME - average_frametime.get_average();
+            }
         }
         _ => (),
-    });
+    }).unwrap();
 }

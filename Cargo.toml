@@ -16,6 +16,7 @@ winit = { version = "0.30.0", default-features = false, features = ["x11", "wayl
 raw-window-handle = "0.5.2"
 bitvec = "1.0.1"
 easy-gltf = "1.1.2"
+simple_moving_average = "1.0.2"
 
 [profile.release]
 lto = true

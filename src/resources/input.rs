@@ -1,5 +1,4 @@
 use bitvec::prelude::*;
-use brood::{query::filter, result, system::System, Views};
 use winit::{
     dpi::PhysicalPosition,
     event::{DeviceEvent, MouseButton, MouseScrollDelta, WindowEvent},
@@ -85,6 +84,11 @@ impl InputResource {
     pub fn key_pressed(&self, key: KeyCode) -> bool {
         self.pressed_keys[key as usize]
     }
+
+    pub fn tick(&mut self) {
+        self.scroll_delta = PhysicalPosition { x: 0.0, y: 0.0 };
+        self.mouse_delta = PhysicalPosition { x: 0.0, y: 0.0 };
+    }
 }
 
 fn physical_pos_cast(physical_pos: &PhysicalPosition<f64>) -> PhysicalPosition<f32> {
@@ -102,35 +106,5 @@ fn mouse_button_to_usize(button: &MouseButton) -> usize {
         MouseButton::Back => 4,
         MouseButton::Forward => 5,
         MouseButton::Other(_) => 6,
-    }
-}
-
-pub struct TickInput;
-
-impl System for TickInput {
-    type Filter = filter::None;
-    type Views<'a> = Views!();
-    type ResourceViews<'a> = Views!(&'a mut InputResource);
-    type EntryViews<'a> = Views!();
-
-    fn run<'a, R, S, I, E>(
-        &mut self,
-        query_result: brood::query::Result<
-            'a,
-            R,
-            S,
-            I,
-            Self::ResourceViews<'a>,
-            Self::EntryViews<'a>,
-            E,
-        >,
-    ) where
-        R: brood::registry::ContainsViews<'a, Self::EntryViews<'a>, E>,
-        I: Iterator<Item = Self::Views<'a>>,
-    {
-        let result!(input) = query_result.resources;
-
-        input.scroll_delta = PhysicalPosition { x: 0.0, y: 0.0 };
-        input.mouse_delta = PhysicalPosition { x: 0.0, y: 0.0 };
     }
 }

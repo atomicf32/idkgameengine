@@ -1,5 +1,5 @@
 use brood::{query::filter, result, system::System, Views};
-use glam::{Mat4, Quat};
+use glam::Quat;
 
 use crate::{components::transform::TransformComponent, resources::time::TimerResource};
 pub struct SpinCube;
@@ -28,12 +28,12 @@ impl System for SpinCube {
         let result!(timer) = query_result.resources;
 
         for result!(transform) in query_result.iter {
-            transform.transform_local(Mat4::from_quat(Quat::from_euler(
+            transform.rotation *= Quat::from_euler(
                 glam::EulerRot::XYZ,
-                45_f32.to_radians() * timer.get_dt(),
-                45_f32.to_radians() * timer.get_dt(),
+                45_f32.to_radians() * timer.get_dt_f32(),
+                45_f32.to_radians() * timer.get_dt_f32(),
                 0_f32,
-            )));
+            );
         }
     }
 }

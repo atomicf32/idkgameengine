@@ -1,9 +1,11 @@
+use std::f32::consts::PI;
+
 use brood::{
     query::{filter, result},
     system::System,
     Views,
 };
-use glam::{Mat4, Quat, Vec3};
+use glam::Quat;
 use winit::keyboard::KeyCode;
 
 use crate::resources::{camera::CameraResource, input::InputResource, time::TimerResource};
@@ -11,7 +13,8 @@ use crate::resources::{camera::CameraResource, input::InputResource, time::Timer
 const CAMERA_SPEED: f32 = 5.0;
 const CAMERA_SENS: f32 = 0.001;
 
-pub struct CameraSystem;
+#[derive(Default)]
+pub struct CameraSystem(f32, f32);
 
 impl System for CameraSystem {
     type Filter = filter::None;
@@ -36,54 +39,32 @@ impl System for CameraSystem {
     {
         let result!(camera, input, timer) = query_result.resources;
 
-        camera.transform_local(&Mat4::from_quat(Quat::from_euler(
-            glam::EulerRot::XYZ,
-            input.get_mouse_delta().y * CAMERA_SENS,
-            input.get_mouse_delta().x * CAMERA_SENS,
-            0.0,
-        )));
+        self.0 = input.get_mouse_delta().x * CAMERA_SENS + self.0;
+        self.1 = (input.get_mouse_delta().y * CAMERA_SENS + self.1).clamp(-PI/2.0, PI/2.0);
+
+        camera.rotation = Quat::from_euler(glam::EulerRot::YXZ, self.0, self.1, 0.0);
 
         if input.key_pressed(KeyCode::KeyW) {
-            camera.transform_local(&Mat4::from_translation(Vec3::new(
-                0.0,
-                0.0,
-                CAMERA_SPEED * timer.get_dt(),
-            )))
+            camera.translation.x += self.0.sin() * CAMERA_SPEED * timer.get_dt_f32();
+            camera.translation.z += self.0.cos() * CAMERA_SPEED * timer.get_dt_f32();
         }
         if input.key_pressed(KeyCode::KeyA) {
-            camera.transform_local(&Mat4::from_translation(Vec3::new(
-                -CAMERA_SPEED * timer.get_dt(),
-                0.0,
-                0.0,
-            )))
+            camera.translation.x -= self.0.cos() * CAMERA_SPEED * timer.get_dt_f32();
+            camera.translation.z -= self.0.sin() * CAMERA_SPEED * timer.get_dt_f32();
         }
         if input.key_pressed(KeyCode::KeyS) {
-            camera.transform_local(&Mat4::from_translation(Vec3::new(
-                0.0,
-                0.0,
-                -CAMERA_SPEED * timer.get_dt(),
-            )))
+            camera.translation.x -= self.0.sin() * CAMERA_SPEED * timer.get_dt_f32();
+            camera.translation.z -= self.0.cos() * CAMERA_SPEED * timer.get_dt_f32();
         }
         if input.key_pressed(KeyCode::KeyD) {
-            camera.transform_local(&Mat4::from_translation(Vec3::new(
-                CAMERA_SPEED * timer.get_dt(),
-                0.0,
-                0.0,
-            )))
+            camera.translation.x += self.0.cos() * CAMERA_SPEED * timer.get_dt_f32();
+            camera.translation.z += self.0.sin() * CAMERA_SPEED * timer.get_dt_f32();
         }
         if input.key_pressed(KeyCode::KeyQ) {
-            camera.transform_local(&Mat4::from_translation(Vec3::new(
-                0.0,
-                CAMERA_SPEED * timer.get_dt(),
-                0.0,
-            )))
+            camera.translation.y -= CAMERA_SPEED * timer.get_dt_f32();
         }
         if input.key_pressed(KeyCode::KeyE) {
-            camera.transform_local(&Mat4::from_translation(Vec3::new(
-                0.0,
-                -CAMERA_SPEED * timer.get_dt(),
-                0.0,
-            )))
+            camera.translation.y += CAMERA_SPEED * timer.get_dt_f32();
         }
     }
 }
