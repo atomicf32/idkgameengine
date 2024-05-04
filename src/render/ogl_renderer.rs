@@ -293,7 +293,7 @@ impl System for OglRenderer {
                             i,
                             &self.program,
                             &uniform! {
-                                matrix: camera.transform(transform),
+                                matrix: camera.transform_model(transform),
                                 tex: ogl_draw.texture.as_ref(),
                             },
                             &draw_parameters,
@@ -307,7 +307,7 @@ impl System for OglRenderer {
                             glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
                             &self.program,
                             &uniform! {
-                                matrix: camera.transform(transform),
+                                matrix: camera.transform_model(transform),
                                 tex: ogl_draw.texture.as_ref(),
                             },
                             &draw_parameters,
