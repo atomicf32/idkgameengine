@@ -8,13 +8,13 @@ pub mod systems;
 use std::{path::Path, time::{Duration, Instant}};
 
 use brood::{entity, resources, schedule, system::schedule::task, World};
-use glam::{Mat4, Quat, Vec3};
+use glam::{Mat4, Quat, Vec3, Vec4};
 
 use resources::{
     camera::CameraResource,
     input::InputResource,
     time::TimerResource,
-    ExitResource, Resources,
+    ExitResource, Resources, SunResource,
 };
 use simple_moving_average::{SingleSumSMA, SMA};
 use systems::{camera_system::CameraSystem, close_system::CloseSystem, spin_system::SpinCube};
@@ -60,6 +60,7 @@ fn main() {
         TimerResource::new(Duration::from_millis(100)),
         InputResource::new(window.has_focus()),
         ExitResource(false),
+        SunResource(Vec4::new(1.2, 1.0, 2.0, 1.0)),
     ));
 
     world.insert(entity!(

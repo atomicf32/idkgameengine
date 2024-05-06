@@ -33,4 +33,8 @@ impl TransformComponent {
             ..Self::IDENTITY
         }
     }
+
+    pub fn get_mat_array(&self) -> [[f32; 4]; 4] {
+        Mat4::from_scale_rotation_translation(self.scale.into(), self.rotation, self.translation.into()).to_cols_array_2d()
+    }
 }

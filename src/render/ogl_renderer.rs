@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     components::{draw::DrawComponent, transform::TransformComponent},
-    resources::camera::CameraResource,
+    resources::{camera::CameraResource, SunResource},
     DrawData, DrawDescriptor, Mesh, Renderer,
 };
 use brood::{query::filter, registry, result, system::System, Views};
@@ -29,14 +29,16 @@ use winit::window::Window;
 #[derive(Copy, Clone)]
 pub struct Vertex {
     position: [f32; 3],
+    normal: [f32; 3],
     tex_coords: [f32; 2],
 }
-implement_vertex!(Vertex, position, tex_coords);
+implement_vertex!(Vertex, position, normal, tex_coords);
 
 impl Vertex {
-    pub fn new(x: f32, y: f32, z: f32, u: f32, v: f32) -> Self {
+    pub fn new(x: f32, y: f32, z: f32, normal_x: f32, normal_y: f32, normal_z: f32, u: f32, v: f32) -> Self {
         Self {
             position: [x, y, z],
+            normal: [normal_x, normal_y, normal_z],
             tex_coords: [u, v],
         }
     }
@@ -173,6 +175,9 @@ impl OglRenderer {
                         i.position.x,
                         i.position.y,
                         i.position.z,
+                        i.normal.x,
+                        i.normal.y,
+                        i.normal.z,
                         i.tex_coords.x,
                         i.tex_coords.y,
                     ))
@@ -251,7 +256,7 @@ impl Renderer for OglRenderer {
 impl System for OglRenderer {
     type Filter = filter::None;
     type Views<'a> = Views!(&'a TransformComponent, &'a DrawComponent);
-    type ResourceViews<'a> = Views!(&'a CameraResource);
+    type ResourceViews<'a> = Views!(&'a CameraResource, &'a SunResource);
     type EntryViews<'a> = Views!();
 
     fn run<'a, R, S, I, E>(
@@ -281,7 +286,7 @@ impl System for OglRenderer {
             ..Default::default()
         };
 
-        let result!(camera) = query_result.resources;
+        let result!(camera, sun) = query_result.resources;
 
         for result!(transform, draw) in query_result.iter {
             let ogl_draw = draw.inner.as_any().downcast_ref::<OglDrawData>().unwrap();
@@ -293,8 +298,10 @@ impl System for OglRenderer {
                             i,
                             &self.program,
                             &uniform! {
-                                matrix: camera.transform_model(transform),
+                                camera_mat: camera.get_mat_array(),
+                                model_mat: transform.get_mat_array(),
                                 tex: ogl_draw.texture.as_ref(),
+                                light_pos: sun.0.to_array(),
                             },
                             &draw_parameters,
                         )
@@ -307,8 +314,10 @@ impl System for OglRenderer {
                             glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
                             &self.program,
                             &uniform! {
-                                matrix: camera.transform_model(transform),
+                                camera_mat: camera.get_mat_array(),
+                                model_mat: transform.get_mat_array(),
                                 tex: ogl_draw.texture.as_ref(),
+                                light_pos: sun.0.to_array(),
                             },
                             &draw_parameters,
                         )
@@ -323,9 +332,9 @@ impl System for OglRenderer {
 
 fn gen_triangle(display: &Display<WindowSurface>) -> OglMesh {
     let triangle_verts = vec![
-        Vertex::new(-0.5, -0.5, 0.0, 0.0, 0.0),
-        Vertex::new(0.5, -0.5, 0.0, 1.0, 0.0),
-        Vertex::new(0.0, 0.5, 0.0, 1.0, 1.0),
+        Vertex::new(-0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+        Vertex::new(0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0),
+        Vertex::new(0.0, 0.5, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0),
     ];
 
     OglMesh {
@@ -338,10 +347,10 @@ fn gen_triangle(display: &Display<WindowSurface>) -> OglMesh {
 
 fn gen_square(display: &Display<WindowSurface>) -> OglMesh {
     let square_verts = vec![
-        Vertex::new(0.5, 0.5, 0.0, 1.0, 1.0),
-        Vertex::new(0.5, -0.5, 0.0, 1.0, 0.0),
-        Vertex::new(-0.5, -0.5, 0.0, 0.0, 0.0),
-        Vertex::new(-0.5, 0.5, 0.0, 0.0, 1.0),
+        Vertex::new(0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0),
+        Vertex::new(0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0),
+        Vertex::new(-0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+        Vertex::new(-0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0),
     ];
 
     let square_indices: Vec<u32> = vec![0, 1, 3, 1, 2, 3];
@@ -364,42 +373,42 @@ fn gen_square(display: &Display<WindowSurface>) -> OglMesh {
 
 fn gen_cube(display: &Display<WindowSurface>) -> OglMesh {
     let cube_verts = vec![
-        Vertex::new(-0.5, -0.5, -0.5, 0.0, 0.0),
-        Vertex::new(0.5, -0.5, -0.5, 1.0, 0.0),
-        Vertex::new(0.5, 0.5, -0.5, 1.0, 1.0),
-        Vertex::new(0.5, 0.5, -0.5, 1.0, 1.0),
-        Vertex::new(-0.5, 0.5, -0.5, 0.0, 1.0),
-        Vertex::new(-0.5, -0.5, -0.5, 0.0, 0.0),
-        Vertex::new(-0.5, -0.5, 0.5, 0.0, 0.0),
-        Vertex::new(0.5, -0.5, 0.5, 1.0, 0.0),
-        Vertex::new(0.5, 0.5, 0.5, 1.0, 1.0),
-        Vertex::new(0.5, 0.5, 0.5, 1.0, 1.0),
-        Vertex::new(-0.5, 0.5, 0.5, 0.0, 1.0),
-        Vertex::new(-0.5, -0.5, 0.5, 0.0, 0.0),
-        Vertex::new(-0.5, 0.5, 0.5, 1.0, 0.0),
-        Vertex::new(-0.5, 0.5, -0.5, 1.0, 1.0),
-        Vertex::new(-0.5, -0.5, -0.5, 0.0, 1.0),
-        Vertex::new(-0.5, -0.5, -0.5, 0.0, 1.0),
-        Vertex::new(-0.5, -0.5, 0.5, 0.0, 0.0),
-        Vertex::new(-0.5, 0.5, 0.5, 1.0, 0.0),
-        Vertex::new(0.5, 0.5, 0.5, 1.0, 0.0),
-        Vertex::new(0.5, 0.5, -0.5, 1.0, 1.0),
-        Vertex::new(0.5, -0.5, -0.5, 0.0, 1.0),
-        Vertex::new(0.5, -0.5, -0.5, 0.0, 1.0),
-        Vertex::new(0.5, -0.5, 0.5, 0.0, 0.0),
-        Vertex::new(0.5, 0.5, 0.5, 1.0, 0.0),
-        Vertex::new(-0.5, -0.5, -0.5, 0.0, 1.0),
-        Vertex::new(0.5, -0.5, -0.5, 1.0, 1.0),
-        Vertex::new(0.5, -0.5, 0.5, 1.0, 0.0),
-        Vertex::new(0.5, -0.5, 0.5, 1.0, 0.0),
-        Vertex::new(-0.5, -0.5, 0.5, 0.0, 0.0),
-        Vertex::new(-0.5, -0.5, -0.5, 0.0, 1.0),
-        Vertex::new(-0.5, 0.5, -0.5, 0.0, 1.0),
-        Vertex::new(0.5, 0.5, -0.5, 1.0, 1.0),
-        Vertex::new(0.5, 0.5, 0.5, 1.0, 0.0),
-        Vertex::new(0.5, 0.5, 0.5, 1.0, 0.0),
-        Vertex::new(-0.5, 0.5, 0.5, 0.0, 0.0),
-        Vertex::new(-0.5, 0.5, -0.5, 0.0, 1.0),
+        Vertex::new(-0.5, -0.5, -0.5,  0.0,  0.0, -1.0, 0.0, 0.0),
+        Vertex::new( 0.5, -0.5, -0.5,  0.0,  0.0, -1.0, 1.0, 0.0),
+        Vertex::new( 0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 1.0, 1.0),
+        Vertex::new( 0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 1.0, 1.0),
+        Vertex::new(-0.5,  0.5, -0.5,  0.0,  0.0, -1.0, 0.0, 1.0),
+        Vertex::new(-0.5, -0.5, -0.5,  0.0,  0.0, -1.0, 0.0, 0.0),
+        Vertex::new(-0.5, -0.5,  0.5,  0.0,  0.0,  1.0, 0.0, 0.0),
+        Vertex::new( 0.5, -0.5,  0.5,  0.0,  0.0,  1.0, 1.0, 0.0),
+        Vertex::new( 0.5,  0.5,  0.5,  0.0,  0.0,  1.0, 1.0, 1.0),
+        Vertex::new( 0.5,  0.5,  0.5,  0.0,  0.0,  1.0, 1.0, 1.0),
+        Vertex::new(-0.5,  0.5,  0.5,  0.0,  0.0,  1.0, 0.0, 1.0),
+        Vertex::new(-0.5, -0.5,  0.5,  0.0,  0.0,  1.0, 0.0, 0.0),
+        Vertex::new(-0.5,  0.5,  0.5, -1.0,  0.0,  0.0, 1.0, 0.0),
+        Vertex::new(-0.5,  0.5, -0.5, -1.0,  0.0,  0.0, 1.0, 1.0),
+        Vertex::new(-0.5, -0.5, -0.5, -1.0,  0.0,  0.0, 0.0, 1.0),
+        Vertex::new(-0.5, -0.5, -0.5, -1.0,  0.0,  0.0, 0.0, 1.0),
+        Vertex::new(-0.5, -0.5,  0.5, -1.0,  0.0,  0.0, 0.0, 0.0),
+        Vertex::new(-0.5,  0.5,  0.5, -1.0,  0.0,  0.0, 1.0, 0.0),
+        Vertex::new( 0.5,  0.5,  0.5,  1.0,  0.0,  0.0, 1.0, 0.0),
+        Vertex::new( 0.5,  0.5, -0.5,  1.0,  0.0,  0.0, 1.0, 1.0),
+        Vertex::new( 0.5, -0.5, -0.5,  1.0,  0.0,  0.0, 0.0, 1.0),
+        Vertex::new( 0.5, -0.5, -0.5,  1.0,  0.0,  0.0, 0.0, 1.0),
+        Vertex::new( 0.5, -0.5,  0.5,  1.0,  0.0,  0.0, 0.0, 0.0),
+        Vertex::new( 0.5,  0.5,  0.5,  1.0,  0.0,  0.0, 1.0, 0.0),
+        Vertex::new(-0.5, -0.5, -0.5,  0.0, -1.0,  0.0, 0.0, 1.0),
+        Vertex::new( 0.5, -0.5, -0.5,  0.0, -1.0,  0.0, 1.0, 1.0),
+        Vertex::new( 0.5, -0.5,  0.5,  0.0, -1.0,  0.0, 1.0, 0.0),
+        Vertex::new( 0.5, -0.5,  0.5,  0.0, -1.0,  0.0, 1.0, 0.0),
+        Vertex::new(-0.5, -0.5,  0.5,  0.0, -1.0,  0.0, 0.0, 0.0),
+        Vertex::new(-0.5, -0.5, -0.5,  0.0, -1.0,  0.0, 0.0, 1.0),
+        Vertex::new(-0.5,  0.5, -0.5,  0.0,  1.0,  0.0, 0.0, 1.0),
+        Vertex::new( 0.5,  0.5, -0.5,  0.0,  1.0,  0.0, 1.0, 1.0),
+        Vertex::new( 0.5,  0.5,  0.5,  0.0,  1.0,  0.0, 1.0, 0.0),
+        Vertex::new( 0.5,  0.5,  0.5,  0.0,  1.0,  0.0, 1.0, 0.0),
+        Vertex::new(-0.5,  0.5,  0.5,  0.0,  1.0,  0.0, 0.0, 0.0),
+        Vertex::new(-0.5,  0.5, -0.5,  0.0,  1.0,  0.0, 0.0, 1.0),
     ];
 
     OglMesh {

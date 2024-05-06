@@ -25,11 +25,10 @@ impl CameraResource {
         self.projection = Mat4::perspective_infinite_lh(self.fov, aspect_ratio, 0.1);
     }
 
-    pub fn transform_model(&self, model: &TransformComponent) -> [[f32; 4]; 4] {
+    pub fn get_mat_array(&self) -> [[f32; 4]; 4] {
         (
             self.projection *
-            Mat4::from_scale_rotation_translation(self.scale.into(), self.rotation, self.translation.into()).inverse() *
-            Mat4::from_scale_rotation_translation(model.scale.into(), model.rotation, model.translation.into())
+            Mat4::from_scale_rotation_translation(self.scale.into(), self.rotation, self.translation.into()).inverse()
         ).to_cols_array_2d()
     }
 }
